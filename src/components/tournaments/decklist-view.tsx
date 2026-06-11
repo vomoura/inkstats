@@ -11,6 +11,7 @@ interface DeckCard {
   cardName: string;
   displayName: string;
   quantity: number;
+  cost: number | null;
   type: string | null;
   subtype: string | null;
   inkColor: string | null;
@@ -221,7 +222,7 @@ function GridView({ cards }: { cards: DeckCard[] }) {
   );
 }
 
-// --- List View: quantity, ink icon, cost placeholder, name ---
+// --- List View: quantity, ink icon, cost, name ---
 function ListView({ cards }: { cards: DeckCard[] }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-0.5">
@@ -229,6 +230,11 @@ function ListView({ cards }: { cards: DeckCard[] }) {
         <div key={card.id} className="flex items-center gap-1.5 py-1 px-2 rounded hover:bg-accent-light/30 transition-colors">
           <span className="text-xs font-bold text-muted w-6 text-right shrink-0">{card.quantity}×</span>
           {card.inkColor && <InkIcon ink={card.inkColor} size={14} className="shrink-0" />}
+          {card.cost !== null && (
+            <span className="text-[11px] font-bold text-muted bg-border/60 rounded-full w-5 h-5 flex items-center justify-center shrink-0">
+              {card.cost}
+            </span>
+          )}
           <span className="text-sm truncate flex-1">{card.displayName}</span>
         </div>
       ))}
@@ -249,51 +255,41 @@ function StackView({ cards }: { cards: DeckCard[] }) {
 
 function StackCard({ card }: { card: DeckCard }) {
   // Create a stack of overlapping cards based on quantity (max 4)
+  // Spacing: 0, 1.5rem, 3rem, 4.5rem (24px apart)
   const qty = Math.min(card.quantity, 4);
-  const offsets = [0, 4, 8, 12]; // px offset for each copy
+  const stackHeight = (qty - 1) * 24; // extra height needed for stacking
 
   return (
-    <div className="relative" style={{ paddingTop: `${(qty - 1) * 4}px` }}>
+    <div className="relative" style={{ marginBottom: `${stackHeight}px` }}>
       {Array.from({ length: qty }).map((_, i) => (
         <div
           key={i}
-          className="absolute left-0 right-0"
+          className={`${i === 0 ? "relative" : "absolute left-0 right-0"}`}
           style={{
-            top: `${offsets[i]}px`,
-            zIndex: i,
+            top: i === 0 ? undefined : `${i * 24}px`,
+            zIndex: i + 1,
           }}
         >
           {card.imageUrl ? (
             <img
               src={card.imageUrl}
               alt={card.displayName}
-              className={`w-full rounded-lg border border-border shadow-sm ${i < qty - 1 ? "brightness-75" : ""}`}
+              className={`w-full rounded-lg border border-border shadow-sm ${i < qty - 1 ? "brightness-[0.6]" : ""}`}
               loading="lazy"
             />
           ) : (
-            <div className={`w-full aspect-[2.5/3.5] rounded-lg border border-border bg-border/30 ${i < qty - 1 ? "brightness-75" : ""}`} />
+            <div className={`w-full aspect-[2.5/3.5] rounded-lg border border-border bg-border/30 flex items-center justify-center p-2 ${i < qty - 1 ? "brightness-[0.6]" : ""}`}>
+              {i === qty - 1 && <span className="text-[10px] text-center text-muted leading-tight">{card.displayName}</span>}
+            </div>
+          )}
+          {/* Only show quantity badge on the topmost card */}
+          {i === qty - 1 && (
+            <span className="absolute top-1.5 right-1.5 text-[11px] font-bold bg-accent text-white min-w-[24px] text-center px-1.5 py-0.5 rounded-full shadow">
+              {card.quantity}×
+            </span>
           )}
         </div>
       ))}
-      {/* Top card (visible) */}
-      <div className="relative" style={{ zIndex: qty }}>
-        {card.imageUrl ? (
-          <img
-            src={card.imageUrl}
-            alt={card.displayName}
-            className="w-full rounded-lg border border-border shadow-sm"
-            loading="lazy"
-          />
-        ) : (
-          <div className="w-full aspect-[2.5/3.5] rounded-lg border border-border bg-border/30 flex items-center justify-center p-2">
-            <span className="text-[10px] text-center text-muted leading-tight">{card.displayName}</span>
-          </div>
-        )}
-        {/* Quantity badge */}
-        <span className="absolute top-1.5 right-1.5 text-[11px] font-bold bg-accent text-white min-w-[24px] text-center px-1.5 py-0.5 rounded-full shadow">
-          {card.quantity}×
-        </span>
-      </div>
     </div>
   );
 }

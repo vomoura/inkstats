@@ -3,7 +3,6 @@
 import { prisma } from "@/lib/db/prisma";
 import { getPlayerProfile } from "@/lib/db";
 import { fetchEventRecap, fetchDecklist } from "@/lib/playhub";
-import { parseSetCode, parseCollectorNumber, fetchLorcastCard } from "@/lib/playhub/lorcast";
 
 export async function importDecklistAction(eventId: string, resultId: string) {
   try {
@@ -43,19 +42,17 @@ export async function importDecklistAction(eventId: string, resultId: string) {
     const cardsWithImages = [];
     for (const card of decklist.cards) {
       let imageUrl: string | null = null;
+      let cost: number | null = null;
 
-      if (card.setCode) {
-        const lorcastSet = parseSetCode(card.setCode);
-        // collector_number from PlayHub is in format "204 EN 10" - we need just "204"
-        // But we don't have collector_number in our DeckCardEntry type yet
-        // Use search by name as fallback
-        const lorcastCard = await fetchLorcastCardByName(card.displayName);
-        imageUrl = lorcastCard;
+      if (card.displayName) {
+        const lorcastData = await fetchLorcastCardByName(card.displayName);
+        imageUrl = lorcastData.imageUrl;
+        cost = lorcastData.cost;
         // Rate limit: 100ms between requests
         await new Promise((resolve) => setTimeout(resolve, 100));
       }
 
-      cardsWithImages.push({ ...card, imageUrl });
+      cardsWithImages.push({ ...card, imageUrl, cost });
     }
 
     // Save deck cards with Lorcast image URLs
@@ -65,6 +62,7 @@ export async function importDecklistAction(eventId: string, resultId: string) {
         cardName: card.cardName,
         displayName: card.displayName,
         quantity: card.quantity,
+        cost: card.cost,
         type: card.type,
         subtype: card.subtype,
         inkColor: card.inkColor ? card.inkColor.charAt(0).toUpperCase() + card.inkColor.slice(1) : null,
@@ -92,29 +90,31 @@ export async function importDecklistAction(eventId: string, resultId: string) {
 }
 
 /**
- * Search Lorcast by card display name and return the normal image URL.
- * Display name format from PlayHub: "Name - Version" (e.g. "Judy Hopps - Lead Detective")
+ * Search Lorcast by card display name and return image URL + cost.
  */
-async function fetchLorcastCardByName(displayName: string): Promise<string | null> {
+async function fetchLorcastCardByName(displayName: string): Promise<{ imageUrl: string | null; cost: number | null }> {
   try {
-    // PlayHub display name is "Name - Version", Lorcast expects just the words
     const searchTerms = displayName.replace(" - ", " ");
     const query = encodeURIComponent(searchTerms);
     const response = await fetch(`https://api.lorcast.com/v0/cards/search?q=${query}`, {
       headers: { Accept: "application/json" },
     });
-    if (!response.ok) return null;
+    if (!response.ok) return { imageUrl: null, cost: null };
     const data = await response.json() as {
       results?: Array<{
         name?: string;
         version?: string;
+        cost?: number | null;
         image_uris?: { digital?: { normal?: string } };
       }>;
     };
     const card = data.results?.[0];
-    return card?.image_uris?.digital?.normal ?? null;
+    return {
+      imageUrl: card?.image_uris?.digital?.normal ?? null,
+      cost: card?.cost ?? null,
+    };
   } catch {
-    return null;
+    return { imageUrl: null, cost: null };
   }
 }
 

@@ -67,6 +67,7 @@ model DeckCard {
   cardName        String
   displayName     String
   quantity        Int
+  cost            Int?
   type            String?
   subtype         String?
   inkColor        String?
