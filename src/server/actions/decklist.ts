@@ -93,29 +93,34 @@ export async function importDecklistAction(eventId: string, resultId: string) {
 }
 
 /**
- * Fetch card data from lorcana-api.com by display name.
- * Returns cost, inkable, image URL.
+ * Fetch card data from Lorcast API by display name.
+ * Returns cost, inkwell (inkable), image URL.
+ * Lorcast display name format: "Name" + "Version" (searched as "Name Version")
  */
 async function fetchLorcastCardByName(displayName: string): Promise<{ imageUrl: string | null; cost: number | null; inkable: boolean | null }> {
   try {
-    const encoded = encodeURIComponent(displayName);
-    const response = await fetch(
-      `https://api.lorcana-api.com/cards/fetch?strict=${encoded}`,
-      { headers: { Accept: "application/json" } }
-    );
+    // PlayHub display name: "Judy Hopps - Lead Detective" → search "Judy Hopps Lead Detective"
+    const searchTerms = displayName.replace(" - ", " ");
+    const query = encodeURIComponent(searchTerms);
+    const response = await fetch(`https://api.lorcast.com/v0/cards/search?q=${query}`, {
+      headers: { Accept: "application/json" },
+    });
     if (!response.ok) return { imageUrl: null, cost: null, inkable: null };
-    const data = await response.json() as Array<{
-      Name?: string;
-      Cost?: number;
-      Inkable?: boolean;
-      Image?: string;
-    }>;
-    const card = data[0];
+    const data = await response.json() as {
+      results?: Array<{
+        name?: string;
+        version?: string;
+        cost?: number | null;
+        inkwell?: boolean;
+        image_uris?: { digital?: { normal?: string } };
+      }>;
+    };
+    const card = data.results?.[0];
     if (!card) return { imageUrl: null, cost: null, inkable: null };
     return {
-      imageUrl: card.Image ?? null,
-      cost: card.Cost ?? null,
-      inkable: card.Inkable ?? null,
+      imageUrl: card.image_uris?.digital?.normal ?? null,
+      cost: card.cost ?? null,
+      inkable: card.inkwell ?? null,
     };
   } catch {
     return { imageUrl: null, cost: null, inkable: null };
