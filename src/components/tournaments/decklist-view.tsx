@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { Card, CardTitle } from "@/components/ui/card";
 import { InkIcon } from "@/components/ui/ink-icon";
 import { Download, BookOpen, X, Grid2X2, List, Layers } from "lucide-react";
@@ -30,17 +30,6 @@ interface DecklistViewProps {
 
 type ViewMode = "grid" | "list" | "stack";
 
-const RARITY_BORDER: Record<string, string> = {
-  Common: "border-gray-400",
-  Uncommon: "border-gray-500",
-  Rare: "border-yellow-500",
-  Epic: "border-orange-500",
-  Super: "border-purple-500",
-  Legendary: "border-yellow-400",
-  Enchanted: "border-pink-400",
-  Special: "border-blue-400",
-};
-
 export function DecklistView({ eventId, resultId, deckName, deckId, hasToken, initialCards }: DecklistViewProps) {
   const [cards, setCards] = useState<DeckCard[]>(initialCards);
   const [isPending, startTransition] = useTransition();
@@ -48,6 +37,16 @@ export function DecklistView({ eventId, resultId, deckName, deckId, hasToken, in
   const [imported, setImported] = useState(initialCards.length > 0);
   const [modalOpen, setModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
+
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (modalOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => { document.body.style.overflow = ""; };
+  }, [modalOpen]);
 
   function handleImportDecklist() {
     setError(null);
@@ -68,31 +67,21 @@ export function DecklistView({ eventId, resultId, deckName, deckId, hasToken, in
 
   const totalCards = cards.reduce((sum, c) => sum + c.quantity, 0);
 
-  // Group cards by type
+  // Group cards by type, separating Songs from Actions
   const grouped = cards.reduce<Record<string, DeckCard[]>>((acc, card) => {
-    const type = card.type ?? "Other";
+    let type = card.type ?? "Other";
+    if (type === "Action" && card.subtype?.includes("Song")) {
+      type = "Song";
+    }
     if (!acc[type]) acc[type] = [];
     acc[type].push(card);
     return acc;
   }, {});
 
-  const typeOrder = ["Character", "Action", "Item", "Location", "Other"];
+  const typeOrder = ["Character", "Action", "Song", "Item", "Location", "Other"];
   const sortedGroups = typeOrder
     .filter((t) => grouped[t] && grouped[t].length > 0)
     .map((t) => [t, grouped[t]] as [string, DeckCard[]]);
-
-  // Also group Songs separately from Actions if subtype includes Song
-  const withSongs: [string, DeckCard[]][] = [];
-  for (const [type, typeCards] of sortedGroups) {
-    if (type === "Action") {
-      const songs = typeCards.filter((c) => c.subtype?.includes("Song"));
-      const actions = typeCards.filter((c) => !c.subtype?.includes("Song"));
-      if (actions.length > 0) withSongs.push(["Action", actions]);
-      if (songs.length > 0) withSongs.push(["Song", songs]);
-    } else {
-      withSongs.push([type, typeCards]);
-    }
-  }
 
   return (
     <>
@@ -151,7 +140,6 @@ export function DecklistView({ eventId, resultId, deckName, deckId, hasToken, in
                 <p className="text-xs text-muted">{totalCards} cartas</p>
               </div>
               <div className="flex items-center gap-3">
-                {/* View mode toggle */}
                 <div className="flex items-center border border-border rounded-md overflow-hidden">
                   <button
                     onClick={() => setViewMode("grid")}
@@ -186,7 +174,7 @@ export function DecklistView({ eventId, resultId, deckName, deckId, hasToken, in
 
             {/* Modal body */}
             <div className="flex-1 overflow-y-auto p-5">
-              {withSongs.map(([type, typeCards]) => (
+              {sortedGroups.map(([type, typeCards]) => (
                 <div key={type} className="mb-6 last:mb-0">
                   <p className="text-xs font-bold text-muted uppercase tracking-wide mb-3">
                     {type} ({typeCards.reduce((s, c) => s + c.quantity, 0)})
@@ -205,7 +193,7 @@ export function DecklistView({ eventId, resultId, deckName, deckId, hasToken, in
   );
 }
 
-// --- Grid View (card images) ---
+// --- Grid View: card images with quantity badge, no ink icons ---
 function GridView({ cards }: { cards: DeckCard[] }) {
   return (
     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
@@ -215,37 +203,31 @@ function GridView({ cards }: { cards: DeckCard[] }) {
             <img
               src={card.imageUrl}
               alt={card.displayName}
-              className={`w-full rounded-lg border-2 ${RARITY_BORDER[card.rarity ?? ""] ?? "border-border"} shadow-sm`}
+              className="w-full rounded-lg border border-border shadow-sm"
               loading="lazy"
             />
           ) : (
-            <div className={`w-full aspect-[2.5/3.5] rounded-lg border-2 ${RARITY_BORDER[card.rarity ?? ""] ?? "border-border"} bg-border/30 flex items-center justify-center p-2`}>
+            <div className="w-full aspect-[2.5/3.5] rounded-lg border border-border bg-border/30 flex items-center justify-center p-2">
               <span className="text-[10px] text-center text-muted leading-tight">{card.displayName}</span>
             </div>
           )}
           {/* Quantity badge */}
-          <span className="absolute top-1 right-1 text-[10px] font-bold bg-black/80 text-white px-1.5 py-0.5 rounded-full">
+          <span className="absolute top-1.5 right-1.5 text-[11px] font-bold bg-accent text-white min-w-[24px] text-center px-1.5 py-0.5 rounded-full shadow">
             {card.quantity}×
           </span>
-          {/* Ink icon */}
-          {card.inkColor && (
-            <span className="absolute bottom-1 left-1">
-              <InkIcon ink={card.inkColor} size={18} />
-            </span>
-          )}
         </div>
       ))}
     </div>
   );
 }
 
-// --- List View (compact multi-column with ink icons) ---
+// --- List View: quantity, ink icon, cost placeholder, name ---
 function ListView({ cards }: { cards: DeckCard[] }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-0.5">
       {cards.sort((a, b) => a.displayName.localeCompare(b.displayName)).map((card) => (
-        <div key={card.id} className="flex items-center gap-2 py-1 px-2 rounded hover:bg-accent-light/30 transition-colors">
-          <span className="text-xs text-muted w-5 text-right shrink-0">{card.quantity}×</span>
+        <div key={card.id} className="flex items-center gap-1.5 py-1 px-2 rounded hover:bg-accent-light/30 transition-colors">
+          <span className="text-xs font-bold text-muted w-6 text-right shrink-0">{card.quantity}×</span>
           {card.inkColor && <InkIcon ink={card.inkColor} size={14} className="shrink-0" />}
           <span className="text-sm truncate flex-1">{card.displayName}</span>
         </div>
@@ -254,26 +236,64 @@ function ListView({ cards }: { cards: DeckCard[] }) {
   );
 }
 
-// --- Stack View (full detail rows with ink icons) ---
+// --- Stack View: overlapping card images like a pile, with quantity ---
 function StackView({ cards }: { cards: DeckCard[] }) {
   return (
-    <div className="space-y-0.5">
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
       {cards.sort((a, b) => a.displayName.localeCompare(b.displayName)).map((card) => (
-        <div key={card.id} className="flex items-center justify-between px-3 py-2 rounded-md border border-border/50 hover:border-accent/30 transition-colors">
-          <div className="flex items-center gap-3 min-w-0">
-            <span className="text-sm font-bold text-muted w-6 text-right shrink-0">{card.quantity}×</span>
-            {card.inkColor && <InkIcon ink={card.inkColor} size={16} className="shrink-0" />}
-            <div className="min-w-0">
-              <p className="text-sm font-medium truncate">{card.displayName}</p>
-              {card.subtype && <p className="text-[10px] text-muted truncate">{card.subtype}</p>}
-            </div>
-          </div>
-          <div className="flex items-center gap-3 shrink-0">
-            <span className="text-xs text-muted">{card.rarity}</span>
-            {card.setName && <span className="text-[10px] text-muted hidden sm:inline">{card.setName}</span>}
-          </div>
+        <StackCard key={card.id} card={card} />
+      ))}
+    </div>
+  );
+}
+
+function StackCard({ card }: { card: DeckCard }) {
+  // Create a stack of overlapping cards based on quantity (max 4)
+  const qty = Math.min(card.quantity, 4);
+  const offsets = [0, 4, 8, 12]; // px offset for each copy
+
+  return (
+    <div className="relative" style={{ paddingTop: `${(qty - 1) * 4}px` }}>
+      {Array.from({ length: qty }).map((_, i) => (
+        <div
+          key={i}
+          className="absolute left-0 right-0"
+          style={{
+            top: `${offsets[i]}px`,
+            zIndex: i,
+          }}
+        >
+          {card.imageUrl ? (
+            <img
+              src={card.imageUrl}
+              alt={card.displayName}
+              className={`w-full rounded-lg border border-border shadow-sm ${i < qty - 1 ? "brightness-75" : ""}`}
+              loading="lazy"
+            />
+          ) : (
+            <div className={`w-full aspect-[2.5/3.5] rounded-lg border border-border bg-border/30 ${i < qty - 1 ? "brightness-75" : ""}`} />
+          )}
         </div>
       ))}
+      {/* Top card (visible) */}
+      <div className="relative" style={{ zIndex: qty }}>
+        {card.imageUrl ? (
+          <img
+            src={card.imageUrl}
+            alt={card.displayName}
+            className="w-full rounded-lg border border-border shadow-sm"
+            loading="lazy"
+          />
+        ) : (
+          <div className="w-full aspect-[2.5/3.5] rounded-lg border border-border bg-border/30 flex items-center justify-center p-2">
+            <span className="text-[10px] text-center text-muted leading-tight">{card.displayName}</span>
+          </div>
+        )}
+        {/* Quantity badge */}
+        <span className="absolute top-1.5 right-1.5 text-[11px] font-bold bg-accent text-white min-w-[24px] text-center px-1.5 py-0.5 rounded-full shadow">
+          {card.quantity}×
+        </span>
+      </div>
     </div>
   );
 }
