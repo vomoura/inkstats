@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model PlayerProfile {
+  id            String        @id @default(cuid())
+  displayName   String
+  aliases       PlayerAlias[]
+  playHubToken  String?
+  playHubUserId Int?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model PlayerAlias {
+  id        String        @id @default(cuid())
+  value     String        @unique
+  profileId String
+  profile   PlayerProfile @relation(fields: [profileId], references: [id])
+}
+
+model Event {
+  id           String             @id
+  name         String
+  storeName    String?
+  city         String?
+  startDate    DateTime?
+  format       String?
+  category     String?
+  totalPlayers Int?
+  importedAt   DateTime           @default(now())
+  results      TournamentResult[]
+  matches      Match[]
+}
+
+model TournamentResult {
+  id                String   @id @default(cuid())
+  eventId           String
+  event             Event    @relation(fields: [eventId], references: [id])
+  playerName        String
+  matchedAlias      String?
+  isUserResult      Boolean  @default(false)
+  needsConfirmation Boolean  @default(true)
+  standing          Int?
+  wins              Int      @default(0)
+  losses            Int      @default(0)
+  draws             Int      @default(0)
+  points            Int?
+  deckName          String?
+  inkColors         String?
+  notes             String?
+  deckId            String?
+  deckCards         DeckCard[]
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model DeckCard {
+  id              String           @id @default(cuid())
+  resultId        String
+  result          TournamentResult @relation(fields: [resultId], references: [id])
+  cardName        String
+  displayName     String
+  quantity        Int
+  type            String?
+  subtype         String?
+  inkColor        String?
+  rarity          String?
+  setName         String?
+  setCode         String?
+  imageUrl        String?
+  rulesText       String?
+}
+
+model Match {
+  id           String      @id @default(cuid())
+  eventId      String
+  event        Event       @relation(fields: [eventId], references: [id])
+  roundNumber  Int?
+  playerName   String
+  opponentName String?
+  result       MatchResult
+  score        String?
+  isUserMatch  Boolean     @default(false)
+}
+
+enum MatchResult {
+  WIN
+  LOSS
+  DRAW
+  UNKNOWN
+}
