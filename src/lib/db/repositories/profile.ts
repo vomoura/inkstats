@@ -22,7 +22,7 @@ export async function updatePlayerProfile(data: {
   try {
     const existing = await prisma.playerProfile.findFirst();
 
-    const updateData: Record<string, unknown> = {};
+    const updateData: Record<string, unknown> = { updatedAt: new Date() };
     if (data.displayName !== undefined) updateData.displayName = data.displayName;
     if (data.playHubToken !== undefined) updateData.playHubToken = data.playHubToken;
     if (data.playHubUserId !== undefined) updateData.playHubUserId = data.playHubUserId;
@@ -40,6 +40,7 @@ export async function updatePlayerProfile(data: {
         displayName: data.displayName ?? "Player",
         playHubToken: data.playHubToken ?? null,
         playHubUserId: data.playHubUserId ?? null,
+        updatedAt: new Date(),
       },
       include: { aliases: true },
     });
@@ -50,9 +51,12 @@ export async function updatePlayerProfile(data: {
 
 export async function addPlayerAlias(value: string): Promise<PlayerAlias> {
   try {
-    const profile = await prisma.playerProfile.findFirst();
+    let profile = await prisma.playerProfile.findFirst();
     if (!profile) {
-      throw new NotFoundError("PlayerProfile");
+      // Auto-create profile if it doesn't exist yet
+      profile = await prisma.playerProfile.create({
+        data: { displayName: "Player", updatedAt: new Date() },
+      });
     }
 
     return await prisma.playerAlias.create({
