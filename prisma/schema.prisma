@@ -68,6 +68,7 @@ model DeckCard {
   displayName     String
   quantity        Int
   cost            Int?
+  inkable         Boolean?
   type            String?
   subtype         String?
   inkColor        String?

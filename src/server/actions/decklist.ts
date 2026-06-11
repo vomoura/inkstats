@@ -43,19 +43,21 @@ export async function importDecklistAction(eventId: string, resultId: string) {
     for (const card of decklist.cards) {
       let imageUrl: string | null = null;
       let cost: number | null = null;
+      let inkable: boolean | null = null;
 
       if (card.displayName) {
         const lorcastData = await fetchLorcastCardByName(card.displayName);
         imageUrl = lorcastData.imageUrl;
         cost = lorcastData.cost;
+        inkable = lorcastData.inkable;
         // Rate limit: 100ms between requests
         await new Promise((resolve) => setTimeout(resolve, 100));
       }
 
-      cardsWithImages.push({ ...card, imageUrl, cost });
+      cardsWithImages.push({ ...card, imageUrl, cost, inkable });
     }
 
-    // Save deck cards with Lorcast image URLs
+    // Save deck cards with image URLs from lorcana-api.com
     await prisma.deckCard.createMany({
       data: cardsWithImages.map((card) => ({
         resultId,
@@ -63,6 +65,7 @@ export async function importDecklistAction(eventId: string, resultId: string) {
         displayName: card.displayName,
         quantity: card.quantity,
         cost: card.cost,
+        inkable: card.inkable,
         type: card.type,
         subtype: card.subtype,
         inkColor: card.inkColor ? card.inkColor.charAt(0).toUpperCase() + card.inkColor.slice(1) : null,
@@ -90,31 +93,32 @@ export async function importDecklistAction(eventId: string, resultId: string) {
 }
 
 /**
- * Search Lorcast by card display name and return image URL + cost.
+ * Fetch card data from lorcana-api.com by display name.
+ * Returns cost, inkable, image URL.
  */
-async function fetchLorcastCardByName(displayName: string): Promise<{ imageUrl: string | null; cost: number | null }> {
+async function fetchLorcastCardByName(displayName: string): Promise<{ imageUrl: string | null; cost: number | null; inkable: boolean | null }> {
   try {
-    const searchTerms = displayName.replace(" - ", " ");
-    const query = encodeURIComponent(searchTerms);
-    const response = await fetch(`https://api.lorcast.com/v0/cards/search?q=${query}`, {
-      headers: { Accept: "application/json" },
-    });
-    if (!response.ok) return { imageUrl: null, cost: null };
-    const data = await response.json() as {
-      results?: Array<{
-        name?: string;
-        version?: string;
-        cost?: number | null;
-        image_uris?: { digital?: { normal?: string } };
-      }>;
-    };
-    const card = data.results?.[0];
+    const encoded = encodeURIComponent(displayName);
+    const response = await fetch(
+      `https://api.lorcana-api.com/cards/fetch?strict=${encoded}`,
+      { headers: { Accept: "application/json" } }
+    );
+    if (!response.ok) return { imageUrl: null, cost: null, inkable: null };
+    const data = await response.json() as Array<{
+      Name?: string;
+      Cost?: number;
+      Inkable?: boolean;
+      Image?: string;
+    }>;
+    const card = data[0];
+    if (!card) return { imageUrl: null, cost: null, inkable: null };
     return {
-      imageUrl: card?.image_uris?.digital?.normal ?? null,
-      cost: card?.cost ?? null,
+      imageUrl: card.Image ?? null,
+      cost: card.Cost ?? null,
+      inkable: card.Inkable ?? null,
     };
   } catch {
-    return { imageUrl: null, cost: null };
+    return { imageUrl: null, cost: null, inkable: null };
   }
 }
 

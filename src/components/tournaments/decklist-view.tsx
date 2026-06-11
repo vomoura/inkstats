@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useEffect } from "react";
 import { Card, CardTitle } from "@/components/ui/card";
-import { InkIcon } from "@/components/ui/ink-icon";
+import { InkIcon, CostIcon } from "@/components/ui/ink-icon";
 import { Download, BookOpen, X, Grid2X2, List, Layers } from "lucide-react";
 import { importDecklistAction, getDecklistAction } from "@/server/actions/decklist";
 
@@ -12,6 +12,7 @@ interface DeckCard {
   displayName: string;
   quantity: number;
   cost: number | null;
+  inkable: boolean | null;
   type: string | null;
   subtype: string | null;
   inkColor: string | null;
@@ -231,9 +232,7 @@ function ListView({ cards }: { cards: DeckCard[] }) {
           <span className="text-xs font-bold text-muted w-6 text-right shrink-0">{card.quantity}×</span>
           {card.inkColor && <InkIcon ink={card.inkColor} size={14} className="shrink-0" />}
           {card.cost !== null && (
-            <span className="text-[11px] font-bold text-muted bg-border/60 rounded-full w-5 h-5 flex items-center justify-center shrink-0">
-              {card.cost}
-            </span>
+            <CostIcon cost={card.cost} inkable={card.inkable} size={18} className="shrink-0" />
           )}
           <span className="text-sm truncate flex-1">{card.displayName}</span>
         </div>
