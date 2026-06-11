@@ -60,6 +60,33 @@ export async function importEventAction(eventId: number) {
       totalPlayers: details.totalPlayers,
       results: details.standings.map((s) => {
         const match = potentialMatches.find((m) => m.playerName === s.playerName);
+        if (match && match.confidence === "exact") {
+          return {
+            playerName: s.playerName,
+            standing: s.standing,
+            wins: s.wins,
+            losses: s.losses,
+            draws: s.draws,
+            points: s.points,
+            matchedAlias: match.matchedAlias,
+            isUserResult: true,
+            needsConfirmation: false,
+          };
+        }
+        if (match && match.confidence === "partial") {
+          return {
+            playerName: s.playerName,
+            standing: s.standing,
+            wins: s.wins,
+            losses: s.losses,
+            draws: s.draws,
+            points: s.points,
+            matchedAlias: match.matchedAlias,
+            isUserResult: false,
+            needsConfirmation: true,
+          };
+        }
+        // No match — not the user, no confirmation needed
         return {
           playerName: s.playerName,
           standing: s.standing,
@@ -67,11 +94,8 @@ export async function importEventAction(eventId: number) {
           losses: s.losses,
           draws: s.draws,
           points: s.points,
-          ...(match && {
-            matchedAlias: match.matchedAlias,
-            isUserResult: match.confidence === "exact",
-            needsConfirmation: match.confidence === "partial",
-          }),
+          isUserResult: false,
+          needsConfirmation: false,
         };
       }),
       matches: details.rounds.flatMap((round) =>

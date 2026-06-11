@@ -23,6 +23,9 @@ export type ImportEventData = {
     losses?: number;
     draws?: number;
     points?: number | null;
+    matchedAlias?: string | null;
+    isUserResult?: boolean;
+    needsConfirmation?: boolean;
   }>;
   matches?: Array<{
     roundNumber?: number | null;
@@ -84,6 +87,10 @@ export async function saveImportedEvent(data: ImportEventData): Promise<EventWit
                 losses: r.losses ?? 0,
                 draws: r.draws ?? 0,
                 points: r.points ?? null,
+                matchedAlias: r.matchedAlias ?? null,
+                isUserResult: r.isUserResult ?? false,
+                needsConfirmation: r.needsConfirmation ?? false,
+                updatedAt: new Date(),
               })),
             }
           : undefined,
