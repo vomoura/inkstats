@@ -6,6 +6,7 @@ import { InkIcon, CostIcon } from "@/components/ui/ink-icon";
 import { Download, BookOpen, X, Grid2X2, List, Layers, ClipboardPaste, Save, Share2, Trash2, Copy, Image as ImageIcon, Minus, Plus } from "lucide-react";
 import { importDecklistAction, getDecklistAction, importManualDecklistAction, deleteDecklistAction } from "@/server/actions/decklist";
 import { updateDeckMetadataAction } from "@/server/actions/tournaments";
+import { Toast } from "@/components/ui/toast";
 
 interface DeckCard {
   id: string;
@@ -48,6 +49,7 @@ export function DecklistView({ eventId, resultId, deckName: initialDeckName, dec
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [noPlayHubDeck, setNoPlayHubDeck] = useState(false);
   const [columns, setColumns] = useState(8);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Manual form state
   const [deckName, setDeckName] = useState(initialDeckName ?? "");
@@ -142,6 +144,7 @@ export function DecklistView({ eventId, resultId, deckName: initialDeckName, dec
       .join("\n");
     navigator.clipboard.writeText(text);
     setExportDropdown(false);
+    setToastMessage("Lista copiada");
   }
 
   function handleExportImage() {
@@ -336,6 +339,10 @@ export function DecklistView({ eventId, resultId, deckName: initialDeckName, dec
             </div>
           </div>
         </div>
+      )}
+      {/* Toast */}
+      {toastMessage && (
+        <Toast message={toastMessage} onClose={() => setToastMessage(null)} />
       )}
     </>
   );

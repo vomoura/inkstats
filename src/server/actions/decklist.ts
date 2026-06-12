@@ -94,36 +94,38 @@ export async function importDecklistAction(eventId: string, resultId: string) {
 
 /**
  * Fetch card data from Lorcast API by display name.
- * Returns cost, inkwell (inkable), image URL.
- * Lorcast display name format: "Name" + "Version" (searched as "Name Version")
+ * Returns cost, inkwell (inkable), ink color, type, image URL.
  */
-async function fetchLorcastCardByName(displayName: string): Promise<{ imageUrl: string | null; cost: number | null; inkable: boolean | null }> {
+async function fetchLorcastCardByName(displayName: string): Promise<{ imageUrl: string | null; cost: number | null; inkable: boolean | null; inkColor: string | null; type: string | null }> {
   try {
-    // PlayHub display name: "Judy Hopps - Lead Detective" → search "Judy Hopps Lead Detective"
     const searchTerms = displayName.replace(" - ", " ");
     const query = encodeURIComponent(searchTerms);
     const response = await fetch(`https://api.lorcast.com/v0/cards/search?q=${query}`, {
       headers: { Accept: "application/json" },
     });
-    if (!response.ok) return { imageUrl: null, cost: null, inkable: null };
+    if (!response.ok) return { imageUrl: null, cost: null, inkable: null, inkColor: null, type: null };
     const data = await response.json() as {
       results?: Array<{
         name?: string;
         version?: string;
         cost?: number | null;
         inkwell?: boolean;
+        ink?: string | null;
+        type?: string[];
         image_uris?: { digital?: { normal?: string } };
       }>;
     };
     const card = data.results?.[0];
-    if (!card) return { imageUrl: null, cost: null, inkable: null };
+    if (!card) return { imageUrl: null, cost: null, inkable: null, inkColor: null, type: null };
     return {
       imageUrl: card.image_uris?.digital?.normal ?? null,
       cost: card.cost ?? null,
       inkable: card.inkwell ?? null,
+      inkColor: card.ink ? card.ink.charAt(0).toUpperCase() + card.ink.slice(1).toLowerCase() : null,
+      type: card.type?.[0] ?? null,
     };
   } catch {
-    return { imageUrl: null, cost: null, inkable: null };
+    return { imageUrl: null, cost: null, inkable: null, inkColor: null, type: null };
   }
 }
 
@@ -178,9 +180,9 @@ export async function importManualDecklistAction(resultId: string, deckName: str
         cost: lorcastData.cost,
         inkable: lorcastData.inkable,
         imageUrl: lorcastData.imageUrl,
-        type: null,
+        inkColor: lorcastData.inkColor,
+        type: lorcastData.type,
         subtype: null,
-        inkColor: null,
         rarity: null,
         setName: null,
         setCode: null,
