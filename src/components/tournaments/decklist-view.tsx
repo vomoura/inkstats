@@ -226,19 +226,39 @@ function GridView({ cards }: { cards: DeckCard[] }) {
 // --- List View: quantity, ink icon, cost, name ---
 function ListView({ cards }: { cards: DeckCard[] }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-0.5">
-      {cards.sort((a, b) => a.displayName.localeCompare(b.displayName)).map((card) => (
-        <div key={card.id} className="flex items-center gap-1.5 py-1 px-2 rounded hover:bg-accent-light/30 transition-colors">
-          <span className="text-xs font-bold text-muted w-6 text-right shrink-0">{card.quantity}×</span>
-          {card.inkColor && <InkIcon ink={card.inkColor} size={14} className="shrink-0" />}
-          {card.cost !== null && (
-            <CostIcon cost={card.cost} inkable={card.inkable} size={18} className="shrink-0" />
-          )}
-          <span className="text-sm truncate flex-1">{card.displayName}</span>
-        </div>
-      ))}
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1">
+      {cards.sort((a, b) => a.displayName.localeCompare(b.displayName)).map((card) => {
+        const bgColor = getInkBgColor(card.inkColor);
+        return (
+          <div
+            key={card.id}
+            className="flex items-center gap-1.5 py-1.5 px-2.5 rounded-md"
+            style={{ backgroundColor: bgColor }}
+          >
+            <span className="text-xs font-bold text-white/80 w-6 text-right shrink-0">{card.quantity}×</span>
+            {card.inkColor && <InkIcon ink={card.inkColor} size={20} className="shrink-0" />}
+            {card.cost !== null && (
+              <CostIcon cost={card.cost} inkable={card.inkable} size={20} className="shrink-0" />
+            )}
+            <span className="text-sm text-white truncate flex-1">{card.displayName}</span>
+          </div>
+        );
+      })}
     </div>
   );
+}
+
+function getInkBgColor(inkColor: string | null): string {
+  if (!inkColor) return "#4A5568";
+  const colors: Record<string, string> = {
+    sapphire: "#1B4F72",
+    steel: "#4A5568",
+    amber: "#935116",
+    emerald: "#145A32",
+    ruby: "#7B241C",
+    amethyst: "#512E5F",
+  };
+  return colors[inkColor.toLowerCase().trim()] ?? "#4A5568";
 }
 
 // --- Stack View: overlapping card images like a pile, with quantity ---
