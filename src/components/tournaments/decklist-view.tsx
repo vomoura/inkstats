@@ -378,7 +378,12 @@ function ExportImageModal({ cards, deckName, playerName, inkColors, columns, set
     setDownloading(true);
     try {
       const { default: html2canvas } = await import("html2canvas-pro");
-      const canvas = await html2canvas(canvasRef.current, { useCORS: true, allowTaint: true, scale: 2 });
+      const canvas = await html2canvas(canvasRef.current, {
+        useCORS: true,
+        allowTaint: true,
+        scale: 3,
+        logging: false,
+      });
       const link = document.createElement("a");
       link.download = `${deckName.replace(/[^a-zA-Z0-9]/g, "_")}.png`;
       link.href = canvas.toDataURL("image/png");
@@ -390,51 +395,52 @@ function ExportImageModal({ cards, deckName, playerName, inkColors, columns, set
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="bg-card border border-border rounded-xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
-          <h2 className="font-bold text-lg">Exportar Imagem</h2>
-          <button onClick={onClose} className="p-2 rounded-md text-muted hover:text-foreground hover:bg-border/50 transition-colors"><X size={18} /></button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-sm" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="bg-card border border-border rounded-xl w-full max-w-3xl h-[85vh] flex flex-col shadow-2xl">
+        {/* Fixed header */}
+        <div className="flex items-center justify-between px-4 sm:px-5 py-3 border-b border-border shrink-0">
+          <h2 className="font-bold text-base sm:text-lg">Exportar Imagem</h2>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xs sm:text-sm font-medium">Colunas:</span>
+              <button onClick={() => setColumns(Math.max(6, columns - 1))} className="p-1 rounded border border-border hover:bg-border/50"><Minus size={14} /></button>
+              <span className="font-bold text-sm w-4 text-center">{columns}</span>
+              <button onClick={() => setColumns(Math.min(10, columns + 1))} className="p-1 rounded border border-border hover:bg-border/50"><Plus size={14} /></button>
+            </div>
+            <button onClick={onClose} className="p-2 rounded-md text-muted hover:text-foreground hover:bg-border/50 transition-colors"><X size={18} /></button>
+          </div>
         </div>
 
-        <div className="p-5 space-y-4 overflow-y-auto flex-1">
-          {/* Column selector */}
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-medium">Colunas:</span>
-            <button onClick={() => setColumns(Math.max(6, columns - 1))} className="p-1 rounded border border-border hover:bg-border/50"><Minus size={14} /></button>
-            <span className="font-bold text-sm w-4 text-center">{columns}</span>
-            <button onClick={() => setColumns(Math.min(10, columns + 1))} className="p-1 rounded border border-border hover:bg-border/50"><Plus size={14} /></button>
-          </div>
-
-          {/* Preview */}
+        {/* Scrollable preview */}
+        <div className="flex-1 overflow-y-auto p-3 sm:p-5">
           <div ref={canvasRef} className="rounded-lg overflow-hidden" style={{ background: gradient }}>
             <div className="px-4 py-3 text-center">
-              <p className="text-white font-bold text-lg">{playerName} — {deckName}</p>
+              <p className="text-white font-bold text-sm sm:text-lg">{playerName} — {deckName}</p>
             </div>
-            <div className="px-3 pb-3" style={{ display: "grid", gridTemplateColumns: `repeat(${columns}, 1fr)`, gap: "4px" }}>
+            <div className="px-2 sm:px-3 pb-2 sm:pb-3" style={{ display: "grid", gridTemplateColumns: `repeat(${columns}, 1fr)`, gap: "3px" }}>
               {sortedCards.map((card) => (
                 <div key={card.id} className="relative">
                   {card.imageUrl ? (
-                    <img src={card.imageUrl} alt={card.displayName} className="w-full rounded-sm" crossOrigin="anonymous" />
+                    <img src={card.imageUrl} alt={card.displayName} className="w-full rounded-sm" loading="eager" />
                   ) : (
                     <div className="w-full aspect-[2.5/3.5] rounded-sm bg-black/30 flex items-center justify-center">
-                      <span className="text-[8px] text-white/70 text-center px-1">{card.displayName}</span>
+                      <span className="text-[6px] sm:text-[8px] text-white/70 text-center px-0.5">{card.displayName}</span>
                     </div>
                   )}
-                  <span className="absolute top-0.5 right-0.5 text-[10px] font-bold bg-black/70 text-white px-1 rounded">
+                  <span className="absolute top-0 right-0 text-[8px] sm:text-[10px] font-bold bg-black/70 text-white px-0.5 sm:px-1 rounded-bl">
                     {card.quantity}
                   </span>
                 </div>
               ))}
             </div>
           </div>
+        </div>
 
-          {/* Download button */}
-          <div className="flex justify-end">
-            <button onClick={handleDownload} disabled={downloading} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md bg-accent text-white text-sm font-medium hover:bg-accent/90 disabled:opacity-50 transition-colors">
-              <Download size={14} /> {downloading ? "Gerando..." : "Download"}
-            </button>
-          </div>
+        {/* Fixed footer */}
+        <div className="flex justify-end px-4 sm:px-5 py-3 border-t border-border shrink-0">
+          <button onClick={handleDownload} disabled={downloading} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md bg-accent text-white text-sm font-medium hover:bg-accent/90 disabled:opacity-50 transition-colors">
+            <Download size={14} /> {downloading ? "Gerando..." : "Download"}
+          </button>
         </div>
       </div>
     </div>
