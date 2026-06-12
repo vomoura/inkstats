@@ -43,9 +43,9 @@ export function DecklistView({ eventId, resultId, deckName: initialDeckName, dec
   const [modalOpen, setModalOpen] = useState(false);
   const [pasteModalOpen, setPasteModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
-  const [showManualForm, setShowManualForm] = useState(false);
+  const [noPlayHubDeck, setNoPlayHubDeck] = useState(false);
 
-  // Manual deck form state
+  // Manual form state
   const [deckName, setDeckName] = useState(initialDeckName ?? "");
   const [selectedColors, setSelectedColors] = useState<string[]>(
     initialInkColors ? initialInkColors.split(",").map((c) => c.trim()).filter(Boolean) : []
@@ -57,7 +57,9 @@ export function DecklistView({ eventId, resultId, deckName: initialDeckName, dec
   const [pasteDeckName, setPasteDeckName] = useState("");
   const [pasteText, setPasteText] = useState("");
 
-  // Lock body scroll when any modal is open
+  // Detect ink colors from imported cards
+  const detectedColors = [...new Set(cards.map((c) => c.inkColor).filter(Boolean))] as string[];
+
   useEffect(() => {
     if (modalOpen || pasteModalOpen) {
       document.body.style.overflow = "hidden";
@@ -73,13 +75,13 @@ export function DecklistView({ eventId, resultId, deckName: initialDeckName, dec
       const result = await importDecklistAction(eventId, resultId);
       if (result.error) {
         if (result.error.includes("Nenhuma decklist")) {
-          // No decklist on PlayHub — show manual form
-          setShowManualForm(true);
+          setNoPlayHubDeck(true);
         } else {
           setError(result.error);
         }
       } else {
         setImported(true);
+        setNoPlayHubDeck(false);
         const cardsResult = await getDecklistAction(resultId);
         if (cardsResult.data) {
           setCards(cardsResult.data);
@@ -113,6 +115,7 @@ export function DecklistView({ eventId, resultId, deckName: initialDeckName, dec
         setError(result.error);
       } else {
         setImported(true);
+        setNoPlayHubDeck(false);
         setPasteModalOpen(false);
         const cardsResult = await getDecklistAction(resultId);
         if (cardsResult.data) {
@@ -148,6 +151,9 @@ export function DecklistView({ eventId, resultId, deckName: initialDeckName, dec
     .filter((t) => grouped[t] && grouped[t].length > 0)
     .map((t) => [t, grouped[t]] as [string, DeckCard[]]);
 
+  // Display colors: from imported cards or from manual selection
+  const displayColors = imported && detectedColors.length > 0 ? detectedColors : selectedColors;
+
   return (
     <>
       <Card>
@@ -163,7 +169,7 @@ export function DecklistView({ eventId, resultId, deckName: initialDeckName, dec
                 Ver Decklist ({totalCards})
               </button>
             )}
-            {!imported && hasToken && !showManualForm && (
+            {!imported && hasToken && !noPlayHubDeck && (
               <button
                 onClick={handleImportDecklist}
                 disabled={isPending}
@@ -178,103 +184,101 @@ export function DecklistView({ eventId, resultId, deckName: initialDeckName, dec
 
         {error && <p className="text-xs text-error mb-3">{error}</p>}
 
-        {/* Deck info display */}
-        <div className="space-y-3">
-          {/* Deck name + ink icons */}
+        {/* Imported deck display */}
+        {imported && (
           <div className="flex items-center gap-3">
-            {deckName && <span className="font-medium text-sm">{deckName}</span>}
-            {selectedColors.length > 0 && (
+            {(deckName || initialDeckName) && (
+              <span className="font-medium text-sm">{deckName || initialDeckName}</span>
+            )}
+            {displayColors.length > 0 && (
               <div className="flex items-center gap-1">
-                {selectedColors.length === 2 ? (
-                  <InkIcon ink={selectedColors.join(",")} size={24} />
+                {displayColors.length === 2 ? (
+                  <InkIcon ink={displayColors.join(",")} size={24} />
                 ) : (
-                  selectedColors.map((c) => <InkIcon key={c} ink={c} size={24} />)
+                  displayColors.map((c) => <InkIcon key={c} ink={c} size={24} />)
                 )}
               </div>
             )}
-            {!deckName && !showManualForm && !imported && (
-              <span className="text-sm text-muted">Nenhum deck definido</span>
-            )}
           </div>
+        )}
 
-          {/* Manual form (shown when no PlayHub deck or always for editing) */}
-          {(showManualForm || imported || deckName) && (
-            <div className="space-y-3 pt-2 border-t border-border">
-              <div className="flex flex-col sm:flex-row gap-3">
-                <div className="flex-1">
-                  <label className="block text-xs text-muted mb-1">Nome do deck</label>
-                  <input
-                    type="text"
-                    value={deckName}
-                    onChange={(e) => setDeckName(e.target.value)}
-                    placeholder="Ex: Super Detectives"
-                    className="w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
-                    maxLength={100}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-muted mb-1">Cores</label>
-                  <div className="flex items-center gap-1">
-                    {INK_COLORS_LIST.map((color) => (
-                      <button
-                        key={color}
-                        onClick={() => toggleColor(color)}
-                        className={`p-0.5 rounded-md transition-all ${
-                          selectedColors.includes(color) ? "ring-2 ring-accent scale-110" : "opacity-50 hover:opacity-100"
-                        }`}
-                      >
-                        <InkIcon ink={color} size={24} />
-                      </button>
-                    ))}
+        {/* No deck state — show manual form */}
+        {!imported && (
+          <div className="space-y-4">
+            {noPlayHubDeck && (
+              <p className="text-sm text-muted">Nenhuma decklist encontrada para este evento.</p>
+            )}
+
+            <div>
+              <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-3">
+                Incluir deck manualmente
+              </p>
+
+              <div className="space-y-3">
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="flex-1">
+                    <label className="block text-xs text-muted mb-1">Nome do deck</label>
+                    <input
+                      type="text"
+                      value={deckName}
+                      onChange={(e) => setDeckName(e.target.value)}
+                      placeholder="Ex: Super Detectives"
+                      className="w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
+                      maxLength={100}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-muted mb-1">Cores</label>
+                    <div className="flex items-center gap-1">
+                      {INK_COLORS_LIST.map((color) => (
+                        <button
+                          key={color}
+                          onClick={() => toggleColor(color)}
+                          className={`p-0.5 rounded-md transition-all ${
+                            selectedColors.includes(color) ? "ring-2 ring-accent scale-110" : "opacity-50 hover:opacity-100"
+                          }`}
+                        >
+                          <InkIcon ink={color} size={24} />
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-xs text-muted mb-1">Notas</label>
-                <textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Observações..."
-                  className="w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 resize-none"
-                  rows={2}
-                  maxLength={500}
-                />
-              </div>
+                <div>
+                  <label className="block text-xs text-muted mb-1">Notas</label>
+                  <textarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Observações..."
+                    className="w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 resize-none"
+                    rows={2}
+                    maxLength={500}
+                  />
+                </div>
 
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={handleSaveDeckMetadata}
-                  disabled={isPending}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-accent text-white text-xs font-medium hover:bg-accent/90 disabled:opacity-50 transition-colors"
-                >
-                  <Save size={12} />
-                  Salvar
-                </button>
-                {!imported && (
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={handleSaveDeckMetadata}
+                    disabled={isPending}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-accent text-white text-xs font-medium hover:bg-accent/90 disabled:opacity-50 transition-colors"
+                  >
+                    <Save size={12} />
+                    Salvar
+                  </button>
                   <button
                     onClick={() => setPasteModalOpen(true)}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border text-xs font-medium hover:bg-accent-light hover:text-accent transition-colors"
                   >
                     <ClipboardPaste size={12} />
-                    Importar Deck
+                    Incluir Deck
                   </button>
-                )}
-                {saved && <span className="text-xs text-success">Salvo!</span>}
+                  {saved && <span className="text-xs text-success">Salvo!</span>}
+                </div>
               </div>
             </div>
-          )}
-
-          {/* Show manual form toggle when no deck and no token */}
-          {!imported && !showManualForm && !hasToken && !deckName && (
-            <button
-              onClick={() => setShowManualForm(true)}
-              className="text-xs text-accent hover:underline"
-            >
-              Definir deck manualmente
-            </button>
-          )}
-        </div>
+          </div>
+        )}
       </Card>
 
       {/* Paste Deck Modal */}
@@ -285,7 +289,7 @@ export function DecklistView({ eventId, resultId, deckName: initialDeckName, dec
         >
           <div className="bg-card border border-border rounded-xl w-full max-w-lg flex flex-col shadow-2xl">
             <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-              <h2 className="font-bold text-lg">Importar Deck</h2>
+              <h2 className="font-bold text-lg">Incluir Deck</h2>
               <button
                 onClick={() => setPasteModalOpen(false)}
                 className="p-2 rounded-md text-muted hover:text-foreground hover:bg-border/50 transition-colors"
@@ -321,7 +325,7 @@ export function DecklistView({ eventId, resultId, deckName: initialDeckName, dec
                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md bg-accent text-white text-sm font-medium hover:bg-accent/90 disabled:opacity-50 transition-colors"
                 >
                   <Download size={14} />
-                  {isPending ? "Importando..." : "Importar"}
+                  {isPending ? "Importando..." : "Incluir"}
                 </button>
               </div>
             </div>
@@ -337,9 +341,20 @@ export function DecklistView({ eventId, resultId, deckName: initialDeckName, dec
         >
           <div className="bg-card border border-border rounded-xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl">
             <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
-              <div>
-                <h2 className="font-bold text-lg">{deckName || initialDeckName || "Decklist"}</h2>
-                <p className="text-xs text-muted">{totalCards} cartas</p>
+              <div className="flex items-center gap-3">
+                <div>
+                  <h2 className="font-bold text-lg">{deckName || initialDeckName || "Decklist"}</h2>
+                  <p className="text-xs text-muted">{totalCards} cartas</p>
+                </div>
+                {displayColors.length > 0 && (
+                  <div className="flex items-center gap-1">
+                    {displayColors.length === 2 ? (
+                      <InkIcon ink={displayColors.join(",")} size={28} />
+                    ) : (
+                      displayColors.map((c) => <InkIcon key={c} ink={c} size={28} />)
+                    )}
+                  </div>
+                )}
               </div>
               <div className="flex items-center gap-3">
                 <div className="flex items-center border border-border rounded-md overflow-hidden">
