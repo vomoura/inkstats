@@ -454,7 +454,7 @@ function GridView({ cards }: { cards: DeckCard[] }) {
       {cards.sort((a, b) => a.displayName.localeCompare(b.displayName)).map((card) => (
         <div key={card.id} className="relative">
           {card.imageUrl ? (
-            <img src={card.imageUrl} alt={card.displayName} className="w-full rounded-lg border border-border shadow-sm" loading="lazy" />
+            <img src={`/api/proxy-image?url=${encodeURIComponent(card.imageUrl)}`} alt={card.displayName} className="w-full rounded-lg border border-border shadow-sm" loading="lazy" />
           ) : (
             <div className="w-full aspect-[2.5/3.5] rounded-lg border border-border bg-border/30 flex items-center justify-center p-2">
               <span className="text-[10px] text-center text-muted leading-tight">{card.displayName}</span>
@@ -497,12 +497,13 @@ function StackView({ cards }: { cards: DeckCard[] }) {
 function StackCard({ card }: { card: DeckCard }) {
   const qty = Math.min(card.quantity, 4);
   const stackHeight = (qty - 1) * 24;
+  const proxyUrl = card.imageUrl ? `/api/proxy-image?url=${encodeURIComponent(card.imageUrl)}` : null;
   return (
     <div className="relative" style={{ marginBottom: `${stackHeight}px` }}>
       {Array.from({ length: qty }).map((_, i) => (
         <div key={i} className={`${i === 0 ? "relative" : "absolute left-0 right-0"}`} style={{ top: i === 0 ? undefined : `${i * 24}px`, zIndex: i + 1 }}>
-          {card.imageUrl ? (
-            <img src={card.imageUrl} alt={card.displayName} className={`w-full rounded-lg border border-border shadow-sm ${i < qty - 1 ? "brightness-[0.6]" : ""}`} loading="lazy" />
+          {proxyUrl ? (
+            <img src={proxyUrl} alt={card.displayName} className={`w-full rounded-lg border border-border shadow-sm ${i < qty - 1 ? "brightness-[0.6]" : ""}`} loading="lazy" />
           ) : (
             <div className={`w-full aspect-[2.5/3.5] rounded-lg border border-border bg-border/30 flex items-center justify-center p-2 ${i < qty - 1 ? "brightness-[0.6]" : ""}`}>
               {i === qty - 1 && <span className="text-[10px] text-center text-muted leading-tight">{card.displayName}</span>}
