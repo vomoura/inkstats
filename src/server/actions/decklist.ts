@@ -214,3 +214,17 @@ export async function importManualDecklistAction(resultId: string, deckName: str
     return { data: null, error: message };
   }
 }
+
+export async function deleteDecklistAction(resultId: string) {
+  try {
+    await prisma.deckCard.deleteMany({ where: { resultId } });
+    await prisma.tournamentResult.update({
+      where: { id: resultId },
+      data: { deckId: null, deckName: null, inkColors: null, updatedAt: new Date() },
+    });
+    return { error: null };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Erro ao excluir decklist.";
+    return { error: message };
+  }
+}

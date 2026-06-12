@@ -82,6 +82,7 @@ export default async function TournamentDetailPage({ params }: TournamentDetailP
           notes={userResult.notes ?? ""}
           hasToken={!!profile?.playHubToken}
           initialCards={deckCards ?? []}
+          playerName={profile?.displayName ?? "Player"}
         />
       )}
 
