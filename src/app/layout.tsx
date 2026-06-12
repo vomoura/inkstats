@@ -16,6 +16,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "InkStats — Lorcana Performance Dashboard",
   description: "Track your Disney Lorcana tournament performance",
+  icons: {
+    icon: "/icons/illuminary.png",
+    apple: "/icons/illuminary.png",
+  },
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({

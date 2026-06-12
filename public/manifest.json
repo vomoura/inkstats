@@ -1,0 +1,21 @@
+{
+  "name": "InkStats",
+  "short_name": "InkStats",
+  "description": "Personal Disney Lorcana tournament performance dashboard",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#6366f1",
+  "icons": [
+    {
+      "src": "/icons/illuminary.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/illuminary.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

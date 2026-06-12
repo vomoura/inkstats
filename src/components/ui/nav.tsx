@@ -19,7 +19,8 @@ export function Nav() {
     <nav className="border-b border-border bg-card sticky top-0 z-50">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex h-14 items-center justify-between">
-          <Link href="/" className="font-bold text-lg text-accent">
+          <Link href="/" className="flex items-center gap-2 font-bold text-lg text-accent">
+            <img src="/icons/illuminary.png" alt="InkStats" width={28} height={28} className="rounded" />
             InkStats
           </Link>
           <div className="flex items-center gap-1">
