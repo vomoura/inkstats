@@ -138,3 +138,79 @@ export async function getDecklistAction(resultId: string) {
     return { data: null, error: "Erro ao carregar decklist." };
   }
 }
+
+/**
+ * Import a decklist from pasted text.
+ * Format: "4 Maximus - Team Champion" per line (quantity + space + card name).
+ * Fetches card data (cost, inkable, image) from Lorcast for each card.
+ */
+export async function importManualDecklistAction(resultId: string, deckName: string, text: string) {
+  try {
+    // Parse the pasted text
+    const lines = text.trim().split("\n").filter((l) => l.trim());
+    const parsedCards: Array<{ quantity: number; displayName: string }> = [];
+
+    for (const line of lines) {
+      const match = line.trim().match(/^(\d+)\s+(.+)$/);
+      if (match) {
+        parsedCards.push({
+          quantity: parseInt(match[1], 10),
+          displayName: match[2].trim(),
+        });
+      }
+    }
+
+    if (parsedCards.length === 0) {
+      return { data: null, error: "Não foi possível interpretar a decklist. Use o formato: '4 Nome da Carta'" };
+    }
+
+    // Delete existing deck cards
+    await prisma.deckCard.deleteMany({ where: { resultId } });
+
+    // Fetch card data from Lorcast for each card
+    const cardsWithData = [];
+    for (const card of parsedCards) {
+      const lorcastData = await fetchLorcastCardByName(card.displayName);
+      cardsWithData.push({
+        cardName: card.displayName.split(" - ")[0] ?? card.displayName,
+        displayName: card.displayName,
+        quantity: card.quantity,
+        cost: lorcastData.cost,
+        inkable: lorcastData.inkable,
+        imageUrl: lorcastData.imageUrl,
+        type: null,
+        subtype: null,
+        inkColor: null,
+        rarity: null,
+        setName: null,
+        setCode: null,
+        rulesText: null,
+      });
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+
+    // Save to DB
+    await prisma.deckCard.createMany({
+      data: cardsWithData.map((card) => ({
+        resultId,
+        ...card,
+      })),
+    });
+
+    // Update deck name if provided
+    if (deckName) {
+      await prisma.tournamentResult.update({
+        where: { id: resultId },
+        data: { deckName, updatedAt: new Date() },
+      });
+    }
+
+    return {
+      data: { cardsImported: cardsWithData.length, deckName },
+      error: null,
+    };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Erro ao importar decklist manual.";
+    return { data: null, error: message };
+  }
+}

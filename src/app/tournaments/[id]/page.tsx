@@ -3,7 +3,6 @@ import { Card, CardTitle } from "@/components/ui/card";
 import { getEventDetailAction } from "@/server/actions/tournaments";
 import { getProfileAction } from "@/server/actions/profile";
 import { getDecklistAction } from "@/server/actions/decklist";
-import { DeckEditor } from "@/components/tournaments/deck-editor";
 import { DecklistView } from "@/components/tournaments/decklist-view";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -55,7 +54,7 @@ export default async function TournamentDetailPage({ params }: TournamentDetailP
       {userResult && (
         <Card>
           <CardTitle>Seu Resultado</CardTitle>
-          <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-4">
             <div>
               <p className="text-xs text-muted">Posição</p>
               <p className="text-xl font-bold">#{userResult.standing ?? "—"}</p>
@@ -68,31 +67,19 @@ export default async function TournamentDetailPage({ params }: TournamentDetailP
               <p className="text-xs text-muted">Pontos</p>
               <p className="text-xl font-bold">{userResult.points ?? "—"}</p>
             </div>
-            <div>
-              <p className="text-xs text-muted">Deck</p>
-              <p className="text-sm font-medium mt-1">{userResult.deckName ?? "Não definido"}</p>
-            </div>
-          </div>
-
-          {/* Deck editor */}
-          <div className="mt-4 pt-4 border-t border-border">
-            <DeckEditor
-              resultId={userResult.id}
-              initialDeckName={userResult.deckName ?? ""}
-              initialInkColors={userResult.inkColors ?? ""}
-              initialNotes={userResult.notes ?? ""}
-            />
           </div>
         </Card>
       )}
 
-      {/* Decklist */}
+      {/* Decklist section */}
       {userResult && (
         <DecklistView
           eventId={id}
           resultId={userResult.id}
           deckName={userResult.deckName}
           deckId={userResult.deckId ?? null}
+          inkColors={userResult.inkColors ?? ""}
+          notes={userResult.notes ?? ""}
           hasToken={!!profile?.playHubToken}
           initialCards={deckCards ?? []}
         />
