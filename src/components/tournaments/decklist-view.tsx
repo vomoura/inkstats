@@ -318,7 +318,6 @@ export function DecklistView({ eventId, resultId, deckName: initialDeckName, dec
               <div className="flex items-center gap-3">
                 <div>
                   <h2 className="font-bold text-lg">{currentDeckName}</h2>
-                  <p className="text-xs text-muted">{totalCards} cartas</p>
                 </div>
                 {displayColors.length > 0 && (displayColors.length === 2 ? <InkIcon ink={displayColors.join(",")} size={28} /> : displayColors.map((c) => <InkIcon key={c} ink={c} size={28} />))}
               </div>
