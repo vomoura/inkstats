@@ -421,7 +421,7 @@ function ExportImageModal({ cards, deckName, playerName, inkColors, columns, set
               {sortedCards.map((card) => (
                 <div key={card.id} className="relative">
                   {card.imageUrl ? (
-                    <img src={card.imageUrl} alt={card.displayName} className="w-full rounded-sm" loading="eager" />
+                    <img src={`/api/proxy-image?url=${encodeURIComponent(card.imageUrl)}`} alt={card.displayName} className="w-full rounded-sm" loading="eager" />
                   ) : (
                     <div className="w-full aspect-[2.5/3.5] rounded-sm bg-black/30 flex items-center justify-center">
                       <span className="text-[6px] sm:text-[8px] text-white/70 text-center px-0.5">{card.displayName}</span>
